@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="ledger-standalone" content="1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lessons">
+<meta name="theme-color" content="#fbf9f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#252022" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+html { color-scheme: light; -webkit-text-size-adjust: 100%; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; font-size: 14px; -webkit-tap-highlight-color: transparent; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>Lesson Ledger</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: tablet-first planner. Sticky tab bar; calendar grid beside a day panel on wide screens, stacked on phones. */
+:root {
+  --bg: #f4efed;
+  --surface: #fbf9f8;
+  --surface-2: #eee6e4;
+  --fg: #3a2d35;
+  --muted: #76656d;
+  --line: #e3d8d6;
+  --accent: #9a5574;
+  --accent-fg: #fbf9f8;
+  --academy: #7563a8;
+  --private: #3f7a7f;
+  --other: #a15f37;
+  --due: #b04a3c;
+  --ok: #437a4c;
+  --shadow: 0 1px 2px rgba(58,45,53,.05), 0 6px 18px rgba(58,45,53,.06);
+  --f-display: "Fredoka", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1719; --surface: #252022; --surface-2: #2f282b; --fg: #ece3e6; --muted: #b0a2a8;
+    --line: #3d3438; --accent: #d9a0b8; --accent-fg: #2a1520; --academy: #b3a2e0; --private: #85c2c6;
+    --other: #e3a983; --due: #e78f80; --ok: #8cc79a; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.22);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1c1719; --surface: #252022; --surface-2: #2f282b; --fg: #ece3e6; --muted: #b0a2a8;
+    --line: #3d3438; --accent: #d9a0b8; --accent-fg: #2a1520; --academy: #b3a2e0; --private: #85c2c6;
+    --other: #e3a983; --due: #e78f80; --ok: #8cc79a; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.22);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.45; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+button, input, select, textarea { font: inherit; color: inherit; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Top bar */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 16px; padding-block: 10px; flex-wrap: wrap; }
+.brand { font-family: var(--f-display); font-weight: 600; font-size: 1.25rem; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; margin-right: auto; }
+.brand .mark { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; color: var(--accent-fg); font-size: .9rem; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab .short { display: none; }
+.tab { border: 0; background: transparent; padding: 9px 16px; border-radius: 999px; color: var(--muted); font-weight: 700; cursor: pointer; white-space: nowrap; }
+.tab[aria-current="page"] { background: var(--surface-2); color: var(--accent); }
+.tab:focus-visible, .btn:focus-visible, .chip:focus-visible, .day:focus-visible, .row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sync { font-size: .8rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.sync i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.sync[data-s="cloud"] i { background: var(--ok); }
+.sync[data-s="local"] i { background: var(--other); }
+
+main { padding-block: 20px 60px; }
+h1, h2, h3 { font-family: var(--f-display); letter-spacing: 0; text-wrap: balance; margin: 0; }
+h1 { font-size: 1.7rem; font-weight: 600; }
+h2 { font-size: 1.25rem; font-weight: 600; }
+h3 { font-size: 1rem; font-weight: 600; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+.label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+
+/* Buttons */
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 9px 16px; border-radius: 999px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; min-height: 42px; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.pay { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.btn.danger { color: var(--due); border-color: color-mix(in srgb, var(--due) 40%, var(--line)); }
+.btn.danger.armed { background: var(--due); color: var(--surface); border-color: var(--due); }
+.btn.ghost { border-color: transparent; background: transparent; }
+.btn.sm { min-height: 34px; padding: 5px 10px; font-size: .88rem; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bar .grow { flex: 1; }
+
+/* Type badges */
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+.t-academy { --tc: var(--academy); }
+.t-private { --tc: var(--private); }
+.t-other { --tc: var(--other); }
+.badge { color: var(--tc, var(--muted)); background: color-mix(in srgb, var(--tc, var(--muted)) 13%, var(--surface)); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tc, var(--muted)); display: inline-block; flex: none; }
+
+/* Panels */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
+.notice { padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--other) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--other) 35%, var(--line)); font-size: .9rem; margin-bottom: 16px; }
+
+/* Calendar */
+.cal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+.cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.cal-head h1 { min-width: 0; margin-right: auto; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin-bottom: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--surface); }
+.dow { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--muted); padding: 8px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.day { min-height: 104px; padding: 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); cursor: pointer; display: flex; flex-direction: column; gap: 3px; text-align: left; border-top: 0; border-left: 0; min-width: 0; }
+.day.out { background: color-mix(in srgb, var(--surface-2) 55%, var(--surface)); }
+.day.out .dn { opacity: .5; }
+.day.sel { box-shadow: inset 0 0 0 2px var(--accent); }
+.dn { font-family: var(--f-num); font-size: .82rem; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+.day.today .dn b { background: var(--accent); color: var(--accent-fg); border-radius: 999px; padding: 0 7px; }
+.dn b { font-weight: 600; }
+.mini { font-size: .76rem; line-height: 1.25; padding: 2px 5px; border-radius: 5px; background: color-mix(in srgb, var(--tc) 14%, var(--surface)); color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--tc); }
+.mini .tm { font-family: var(--f-num); font-size: .7rem; color: var(--muted); margin-right: 3px; }
+.mini.cancelled { text-decoration: line-through; opacity: .55; }
+.mini.paid { opacity: .7; }
+.mini.paid::after { content: " ♥"; color: var(--ok); font-weight: 700; }
+.more { font-size: .72rem; color: var(--muted); padding-left: 4px; }
+.dots { display: none; gap: 3px; flex-wrap: wrap; }
+
+.daypanel { padding: 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); }
+.daypanel h2 { margin-bottom: 2px; }
+.lessons { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.lesson { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; background: var(--surface); text-align: left; width: 100%; border-left: 4px solid var(--tc); }
+.lesson:hover { background: var(--surface-2); }
+.lesson .tm { font-family: var(--f-num); font-weight: 600; font-size: .9rem; }
+.lesson .nm { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lesson .sub { font-size: .8rem; color: var(--muted); }
+.state { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.s-paid { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, var(--surface)); }
+.s-due { color: var(--due); background: color-mix(in srgb, var(--due) 12%, var(--surface)); }
+.s-partial { color: var(--other); background: color-mix(in srgb, var(--other) 14%, var(--surface)); }
+.mini.partial::after { content: " ½"; color: var(--other); font-weight: 700; }
+.s-upcoming { color: var(--muted); background: var(--surface-2); }
+.s-cancelled { color: var(--muted); background: var(--surface-2); text-decoration: line-through; }
+.empty { padding: 24px 12px; text-align: center; color: var(--muted); font-size: .92rem; }
+
+/* Students */
+.owed-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 16px 0 22px; }
+.owed { padding: 16px; display: flex; flex-direction: column; gap: 6px; border-top: 4px solid var(--tc); }
+.owed .amt { font-family: var(--f-num); font-size: 1.6rem; font-weight: 600; letter-spacing: -.02em; }
+.owed .amt.zero { color: var(--muted); }
+.owed .bar { margin-top: 6px; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+.seg { display: inline-flex; background: var(--surface-2); padding: 3px; border-radius: 999px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.search { flex: 1; min-width: 160px; }
+.table { overflow-x: auto; }
+.rows { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: minmax(0, 2fr) 110px 110px 90px 130px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); background: transparent; border-left: 0; border-right: 0; border-top: 0; text-align: left; cursor: pointer; width: 100%; }
+.row:last-child { border-bottom: 0; }
+.row:hover { background: var(--surface-2); }
+.row.head { cursor: default; background: var(--surface-2); padding-block: 8px; }
+.row.head:hover { background: var(--surface-2); }
+.row .r { text-align: right; }
+.row .nm { font-weight: 700; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.row .nm span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.owe { color: var(--due); font-weight: 600; }
+.owe.zero { color: var(--muted); font-weight: 500; }
+.archived { opacity: .55; }
+
+/* Payments */
+.pay-sum { display: flex; gap: 28px; flex-wrap: wrap; margin: 14px 0 20px; }
+.pay-sum div { display: flex; flex-direction: column; }
+.pay-sum .num { font-size: 1.35rem; font-weight: 600; }
+.prow { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.prow:last-child { border-bottom: 0; }
+.prow .who { font-weight: 700; min-width: 0; }
+.prow details { grid-column: 1 / -1; font-size: .88rem; }
+.prow summary { cursor: pointer; color: var(--muted); }
+.items { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.items li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.month-h { padding: 10px 16px; background: var(--surface-2); font-weight: 700; display: flex; justify-content: space-between; font-size: .9rem; }
+
+/* Fees page */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field label { font-size: .85rem; font-weight: 700; }
+.field .hint { font-size: .8rem; color: var(--muted); }
+input[type=text], input[type=number], input[type=date], input[type=time], input[type=search], select, textarea { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 9px 11px; min-height: 42px; }
+textarea { min-height: 70px; resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+.section { padding: 18px; display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.check { display: flex; gap: 8px; align-items: center; font-weight: 700; font-size: .92rem; cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+/* Sheet */
+.overlay { position: fixed; inset: 0; z-index: 20; background: rgba(30,20,26,.42); display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.sheet { background: var(--surface); border-radius: 22px; width: 100%; max-width: 580px; max-height: 100%; overflow-y: auto; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+.sheet header { padding: 16px 18px 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.sheet header h2 { margin-right: auto; }
+.sheet .body { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.sheet footer { padding: 12px 18px 16px; border-top: 1px solid var(--line); display: flex; gap: 10px; flex-wrap: wrap; position: sticky; bottom: 0; background: var(--surface); }
+.sheet footer .grow { flex: 1; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.stat-line { display: flex; gap: 22px; flex-wrap: wrap; }
+.stat-line div { display: flex; flex-direction: column; }
+.stat-line .num { font-size: 1.15rem; font-weight: 600; }
+.picklist { border: 1px solid var(--line); border-radius: 12px; max-height: 300px; overflow-y: auto; }
+.pick { display: grid; grid-template-columns: auto 92px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; font-size: .92rem; }
+.pick:last-child { border-bottom: 0; }
+.alloc { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.alloc:last-child { border-bottom: 0; }
+.alloc.on { background: color-mix(in srgb, var(--ok) 7%, var(--surface)); }
+.alloc .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick input { width: 19px; height: 19px; accent-color: var(--ok); }
+.pick .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick.future .num:first-of-type { color: var(--muted); }
+.total-line { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; padding: 4px 2px; }
+.total-line .num { font-size: 1.3rem; }
+.hist { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; max-height: 260px; overflow-y: auto; }
+.hist div { display: grid; grid-template-columns: 96px 54px minmax(0, 1fr) auto; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--line); font-size: .88rem; align-items: center; }
+.hist div:last-child { border-bottom: 0; }
+.err { color: var(--due); font-size: .88rem; font-weight: 700; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--fg); color: var(--bg); border-radius: 999px !important; padding: 10px 16px; border-radius: 9px; font-weight: 700; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+
+.welcome { padding: 22px; margin-bottom: 18px; display: grid; gap: 10px; }
+.welcome ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+
+@media (max-width: 980px) {
+  .cal-layout { grid-template-columns: minmax(0, 1fr); }
+  .daypanel { position: static; }
+}
+@media (max-width: 720px) {
+  .owed-row { grid-template-columns: minmax(0, 1fr); }
+  .row { grid-template-columns: minmax(0, 1fr) 100px; }
+  .row .c-type, .row .c-fee, .row .c-n { display: none; }
+  .prow { grid-template-columns: 1fr auto; }
+  .prow .pd { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .day { min-height: 54px; padding: 4px; align-items: center; }
+  .day .mini, .day .more { display: none; }
+  .dots { display: flex; justify-content: center; }
+  .dn { justify-content: center; }
+  .dn .cnt { display: none; }
+  .dow { padding: 6px 2px; text-align: center; font-size: .66rem; letter-spacing: .02em; }
+  .two, .three { grid-template-columns: 1fr; }
+  .overlay { align-items: flex-end; padding: 0; }
+  .sheet { border-radius: 22px 22px 0 0; max-height: 92%; }
+  .sheet footer { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .pick { grid-template-columns: auto 80px minmax(0, 1fr) auto; }
+  .hist div { grid-template-columns: 88px minmax(0, 1fr) auto; }
+  .hist div .tm2 { display: none; }
+}
+@media (max-width: 600px) {
+  .top .wrap { padding-block: 8px; }
+  .sync span { display: none; }
+  .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(58,45,53,.06); padding: 6px max(10px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .tab { padding: 10px 4px; font-size: .85rem; text-align: center; }
+  .tab .long { display: none; }
+  .tab .short { display: inline; }
+  main { padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  h1 { font-size: 1.45rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span class="mark" aria-hidden="true">♥</span>Lesson Ledger</div>
+    <nav class="tabs" aria-label="Sections">
+      <button class="tab" data-view="calendar">Calendar</button>
+      <button class="tab" data-view="students">Students</button>
+      <button class="tab" data-view="payments"><span class="long">Past payments</span><span class="short">Payments</span></button>
+      <button class="tab" data-view="fees">Fees<span class="long"> &amp; backup</span></button>
+    </nav>
+    <div class="sync" id="sync" data-s="loading"><i></i><span>Connecting…</span></div>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<div id="sheet-root"></div>
+<div id="toast-root"></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- state ---------- */
+const DEFAULT_SETTINGS = { fees: { academy: 800, private: 1000, other: 600 }, currency: "₺", academyName: "Academy" };
+const TYPES = ["academy", "private", "other"];
+const TYPE_LABEL = { academy: "Academy", private: "Private", other: "Other" };
+const LS_KEY = "lesson-ledger-v1";
+const LB_KEY = "lesson-ledger-lastbackup";
+const STANDALONE = !!document.querySelector('meta[name="ledger-standalone"]');
+function lastBackup() { try { return localStorage.getItem(LB_KEY) || ""; } catch { return ""; } }
+function markBackup() { try { localStorage.setItem(LB_KEY, new Date().toISOString()); } catch {} }
+
+let S = { settings: clone(DEFAULT_SETTINGS), students: {}, lessons: {}, payments: {} };
+let mode = "loading";           // loading | cloud | local
+let col = null;                 // db collection for this person
+let downloads = null;
+const ui = {
+  view: "calendar",
+  month: null,                  // "YYYY-MM"
+  selDay: null,                 // "YYYY-MM-DD"
+  stuFilter: "all",
+  stuSearch: "",
+  showArchived: false,
+  payFilter: "all",
+};
+
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function uid(prefix) { const a = "abcdefghijkmnpqrstuvwxyz23456789"; let s = prefix + "-"; for (let i = 0; i < 12; i++) s += a[Math.floor(Math.random() * a.length)]; return s; }
+function pad(n) { return String(n).padStart(2, "0"); }
+function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+function todayStr() { return ymd(new Date()); }
+function parseD(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+function addDays(s, n) { const d = parseD(s); d.setDate(d.getDate() + n); return ymd(d); }
+function fmtDate(s, opts) { try { return parseD(s).toLocaleDateString(undefined, opts || { day: "numeric", month: "short", year: "numeric" }); } catch { return s; } }
+function money(n) { const v = Math.round((+n || 0) * 100) / 100; return S.settings.currency + " " + v.toLocaleString(undefined, { maximumFractionDigits: 2 }); }
+function cleanNum(v) { if (v === "" || v === null || v === undefined) return null; const n = Number(String(v).replace(",", ".")); return Number.isFinite(n) && n >= 0 ? n : null; }
+
+/* ---------- derived ---------- */
+function studentFee(st) { if (!st) return 0; if (st.fee !== null && st.fee !== undefined && st.fee !== "") return +st.fee; return +(S.settings.fees[st.type] ?? 0); }
+function lessonFee(l) { if (l.fee !== null && l.fee !== undefined && l.fee !== "") return +l.fee; return studentFee(S.students[l.studentId]); }
+/* How much has been paid toward each lesson, across all payments.
+   item.fee = amount applied to that lesson; item.full = that payment finished it (older entries have no flag and were full). */
+function paidIndex() {
+  const m = {};
+  for (const p of Object.values(S.payments)) for (const it of (p.items || [])) {
+    const e = m[it.lessonId] || (m[it.lessonId] = { amt: 0, full: false, pays: [] });
+    e.amt += +it.fee || 0; if (it.full !== false) e.full = true; e.pays.push(p);
+  }
+  return m;
+}
+function round2(n) { return Math.round(n * 100) / 100; }
+/* What a lesson costs: a fully paid lesson keeps the amount it was paid at. */
+function chargeOf(l, pi) { return pi && pi.full ? pi.amt : lessonFee(l); }
+function remainingOf(l, pi) { return Math.max(0, round2(chargeOf(l, pi) - (pi ? pi.amt : 0))); }
+/* A lesson incurs debt only once it has finished: start time + duration is in the past.
+   Lessons with no start time count from the day after their date. */
+function lessonEnd(l) {
+  if (!l.time || !/^\d{1,2}:\d{2}/.test(l.time)) { const d = parseD(l.date); d.setDate(d.getDate() + 1); return d; }
+  const [h, m] = l.time.split(":").map(Number);
+  const d = parseD(l.date); d.setHours(h, m + (+l.duration || 0), 0, 0); return d;
+}
+function isDone(l) { return lessonEnd(l).getTime() <= Date.now(); }
+function lessonState(l, paid) {
+  if (l.status === "cancelled") return "cancelled";
+  const pi = paid[l.id];
+  if ((pi && pi.full) || remainingOf(l, pi) <= 0.004) return "paid";
+  if (isDone(l)) return pi && pi.amt > 0 ? "partial" : "due";
+  return "upcoming";
+}
+const STATE_LABEL = { paid: "Paid", due: "Owed", partial: "Part paid", upcoming: "Upcoming", cancelled: "Cancelled" };
+function isOwing(s) { return s === "due" || s === "partial"; }
+function stuType(l) { return S.students[l.studentId]?.type || "other"; }
+function stuName(id) { return S.students[id]?.name || "Removed student"; }
+function lessonsSorted() { return Object.values(S.lessons).sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || ""))); }
+/* Payer groups: all academy students together, each private/other student on their own */
+function groupLessons(group) {
+  return lessonsSorted().filter(l => group === "academy" ? stuType(l) === "academy" : (l.studentId === group && stuType(l) !== "academy"));
+}
+function owedFor(group) {
+  const paid = paidIndex(), t = todayStr();
+  let sum = 0, n = 0;
+  for (const l of groupLessons(group)) if (isOwing(lessonState(l, paid, t))) { sum += remainingOf(l, paid[l.id]); n++; }
+  return { sum: round2(sum), n };
+}
+function owedByStudent(id) {
+  const paid = paidIndex(), t = todayStr(); let sum = 0, n = 0;
+  for (const l of Object.values(S.lessons)) if (l.studentId === id && isOwing(lessonState(l, paid, t))) { sum += remainingOf(l, paid[l.id]); n++; }
+  return { sum: round2(sum), n };
+}
+/* Spread an amount over a payer's open lessons, oldest first: finished lessons, then upcoming ones as prepayment. */
+function allocate(group, amount) {
+  const paid = paidIndex();
+  const open = groupLessons(group).filter(l => { const s = lessonState(l, paid); return isOwing(s) || s === "upcoming"; });
+  let left = round2(amount); const items = []; let openTotal = 0;
+  for (const l of open) {
+    const need = remainingOf(l, paid[l.id]); openTotal += need;
+    if (left <= 0.004 || need <= 0) continue;
+    const ap = round2(Math.min(need, left));
+    items.push({ lessonId: l.id, studentId: l.studentId, studentName: stuName(l.studentId), date: l.date, fee: ap, full: ap >= need - 0.004, upcoming: !isDone(l) });
+    left = round2(left - ap);
+  }
+  return { items, left, open, openTotal: round2(openTotal), paid };
+}
+
+/* ---------- storage ---------- */
+const chains = {};
+function setSync(s, text) { const el = document.getElementById("sync"); el.dataset.s = s; el.querySelector("span").textContent = text; }
+function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch {} }
+function loadLocal() { try { const raw = localStorage.getItem(LS_KEY); if (raw) { const d = JSON.parse(raw); S = { settings: { ...clone(DEFAULT_SETTINGS), ...(d.settings || {}), fees: { ...DEFAULT_SETTINGS.fees, ...((d.settings || {}).fees || {}) } }, students: d.students || {}, lessons: d.lessons || {}, payments: d.payments || {} }; } } catch {} }
+function bucket(kind) { return { student: "students", lesson: "lessons", payment: "payments" }[kind]; }
+
+function writeDoc(id, body) {
+  if (mode !== "cloud" || !col) { saveLocal(); return Promise.resolve(); }
+  const run = () => col.doc(id).set(body);
+  chains[id] = (chains[id] || Promise.resolve()).then(run, run).catch(e => { toast(storeError(e)); });
+  return chains[id];
+}
+function removeDoc(id) {
+  if (mode !== "cloud" || !col) { saveLocal(); return Promise.resolve(); }
+  const run = () => col.doc(id).delete();
+  chains[id] = (chains[id] || Promise.resolve()).then(run, run).catch(e => { toast(storeError(e)); });
+  return chains[id];
+}
+function storeError(e) {
+  if (e && e.code === "quota_exceeded") return "Storage is full. Export a backup and remove old records.";
+  if (e && e.code === "revoked") return "Saving stopped because access to this page changed.";
+  return "Couldn't save that change. Check your connection and try again.";
+}
+function put(kind, obj) {
+  if (kind === "settings") { S.settings = obj; schedule(); return writeDoc("settings", { kind: "settings", ...obj }); }
+  S[bucket(kind)][obj.id] = obj; schedule();
+  return writeDoc(obj.id, { kind, ...obj });
+}
+function drop(kind, id) { delete S[bucket(kind)][id]; schedule(); return removeDoc(id); }
+
+function applySnapshot(snap) {
+  const next = { settings: clone(DEFAULT_SETTINGS), students: {}, lessons: {}, payments: {} };
+  for (const d of snap.docs) {
+    const v = d.data(); if (!v) continue;
+    const body = { ...v }; const kind = body.kind; delete body.kind;
+    if (kind === "settings") next.settings = { ...clone(DEFAULT_SETTINGS), ...body, fees: { ...DEFAULT_SETTINGS.fees, ...(body.fees || {}) } };
+    else if (bucket(kind)) next[bucket(kind)][d.id] = { ...body, id: d.id };
+  }
+  S = next; schedule();
+}
+
+async function init() {
+  render();
+  const c = window.claude;
+  if (!c || typeof c.use !== "function") return goLocal();
+  const slow = setTimeout(() => { if (mode === "loading") setSync("loading", "Still connecting…"); }, 10000);
+  let db = null, user = null;
+  try { [db, user, downloads] = await Promise.all([c.use("db"), c.use("user"), c.use("downloads").catch(() => null)]); } catch {}
+  let id = null;
+  try { id = user ? await user.id() : null; } catch {}
+  if (!db || !id) { clearTimeout(slow); return goLocal(); }
+  col = db.collection("data/users/" + id);
+  mode = "cloud"; setSync("loading", "Loading…");
+  col.onSnapshot(snap => {
+    applySnapshot(snap);
+    if (!snap.metadata.fromCache) { clearTimeout(slow); setSync("cloud", "Saved to your account"); }
+  }, err => {
+    clearTimeout(slow);
+    setSync("local", "Offline");
+    toast(err && err.code === "revoked" ? "Saving stopped because access to this page changed." : "Lost connection to your saved data. Reload the page to reconnect.");
+  });
+}
+function goLocal() {
+  mode = "local"; loadLocal();
+  setSync(STANDALONE ? "cloud" : "local", STANDALONE ? "Saved on this phone" : "This device only");
+  if (STANDALONE && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  render();
+}
+
+/* ---------- render ---------- */
+let rq = false;
+function schedule() { if (rq) return; rq = true; requestAnimationFrame(() => { rq = false; render(); refreshSheet(); }); }
+function render() {
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-current", t.dataset.view === ui.view ? "page" : "false"));
+  const app = document.getElementById("app");
+  const v = { calendar: viewCalendar, students: viewStudents, payments: viewPayments, fees: viewFees }[ui.view] || viewCalendar;
+  // keep search focus while typing
+  const active = document.activeElement && document.activeElement.id;
+  const caret = active && document.activeElement.selectionStart;
+  app.innerHTML = topNotice() + v();
+  if (active) { const el = document.getElementById(active); if (el && el.closest("#app")) { el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch {} } }
+}
+
+function topNotice() {
+  if (STANDALONE) {
+    if (!Object.keys(S.lessons).length) return "";
+    const lb = lastBackup();
+    const days = lb ? Math.floor((Date.now() - new Date(lb).getTime()) / 864e5) : null;
+    if (days !== null && days < 14) return "";
+    return `<div class="notice bar"><span class="grow">${days === null ? "You haven't saved a backup yet." : `Last backup was ${days} days ago.`} Your records live only on this phone, so keep a copy in Files or iCloud.</span><button class="btn sm" data-act="export-json">Back up now</button></div>`;
+  }
+  return mode === "local" ? `<div class="notice">Your records are saved in this browser only. Open this page while signed in to keep them in your account and see them on every device.</div>` : "";
+}
+function welcomeBlock() {
+  if (Object.keys(S.students).length) return "";
+  if (mode === "loading") return `<div class="panel welcome"><h2>Loading your records…</h2></div>`;
+  return `<div class="panel welcome">
+    <h2>Set up in three steps</h2>
+    <ol class="muted">
+      <li>Check the default fee for each lesson type under <b>Fees &amp; backup</b> (academy is ${money(S.settings.fees.academy)}).</li>
+      <li>Add your students on the <b>Students</b> page and choose Academy, Private or Other.</li>
+      <li>Tap any day on the calendar to add a lesson. Weekly lessons can repeat automatically.</li>
+    </ol>
+    <div class="bar"><button class="btn primary" data-act="new-student">Add first student</button></div>
+  </div>`;
+}
+
+/* Calendar */
+function viewCalendar() {
+  const t = todayStr();
+  if (!ui.month) ui.month = t.slice(0, 7);
+  if (!ui.selDay) ui.selDay = t;
+  const [y, m] = ui.month.split("-").map(Number);
+  const first = new Date(y, m - 1, 1);
+  const startOffset = (first.getDay() + 6) % 7; // Monday first
+  const start = ymd(new Date(y, m - 1, 1 - startOffset));
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const cells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const paid = paidIndex();
+  const byDay = {};
+  for (const l of lessonsSorted()) (byDay[l.date] ||= []).push(l);
+  const monthName = first.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const dows = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  let grid = dows.map(d => `<div class="dow">${d}</div>`).join("");
+  for (let i = 0; i < cells; i++) {
+    const ds = addDays(start, i);
+    const list = byDay[ds] || [];
+    const out = ds.slice(0, 7) !== ui.month;
+    const minis = list.slice(0, 3).map(l => `<div class="mini t-${stuType(l)} ${lessonState(l, paid, t)}"><span class="tm">${esc(l.time || "")}</span>${esc(stuName(l.studentId))}</div>`).join("");
+    const more = list.length > 3 ? `<div class="more">+${list.length - 3} more</div>` : "";
+    const dots = list.slice(0, 6).map(l => `<span class="dot t-${stuType(l)}"></span>`).join("");
+    grid += `<button class="day${out ? " out" : ""}${ds === t ? " today" : ""}${ds === ui.selDay ? " sel" : ""}" data-act="pick-day" data-day="${ds}" aria-label="${fmtDate(ds, { weekday: "long", day: "numeric", month: "long" })}, ${list.length} lessons">
+      <span class="dn"><b>${Number(ds.slice(8))}</b><span class="cnt">${list.length ? list.length : ""}</span></span>${minis}${more}<span class="dots">${dots}</span></button>`;
+  }
+  // month stats
+  let mCount = 0, mEarned = 0;
+  for (const l of Object.values(S.lessons)) if (l.date.slice(0, 7) === ui.month && l.status !== "cancelled") { mCount++; mEarned += lessonFee(l); }
+
+  return `${welcomeBlock()}
+  <div class="cal-layout">
+    <section>
+      <div class="cal-head">
+        <h1>${esc(monthName)}</h1>
+        <button class="btn sm" data-act="month" data-d="-1" aria-label="Previous month">‹</button>
+        <button class="btn sm" data-act="month" data-d="0">Today</button>
+        <button class="btn sm" data-act="month" data-d="1" aria-label="Next month">›</button>
+      </div>
+      <div class="legend">
+        <span><i class="dot t-academy"></i>Academy</span><span><i class="dot t-private"></i>Private</span><span><i class="dot t-other"></i>Other</span>
+        <span class="num">${mCount} ${mCount === 1 ? "lesson" : "lessons"} · ${money(mEarned)} this month</span>
+      </div>
+      <div class="grid" role="grid">${grid}</div>
+    </section>
+    <aside class="panel daypanel">${dayPanel(ui.selDay, byDay[ui.selDay] || [], paid, t)}</aside>
+  </div>`;
+}
+function dayPanel(ds, list, paid, t) {
+  const items = list.map(l => {
+    const st = lessonState(l, paid, t);
+    const stLabel = STATE_LABEL[st];
+    const pi = paid[l.id];
+    const feeTxt = pi && st !== "paid" ? `${money(pi.amt)} of ${money(chargeOf(l, pi))} paid` : money(chargeOf(l, pi));
+    const sub = [l.duration ? l.duration + " min" : "", feeTxt, l.status === "missed" ? "missed, charged" : ""].filter(Boolean).join(" · ");
+    return `<button class="lesson t-${stuType(l)}" data-act="edit-lesson" data-id="${l.id}">
+      <span class="tm">${esc(l.time || "—")}</span>
+      <span style="min-width:0"><div class="nm">${esc(stuName(l.studentId))}</div><div class="sub num">${esc(sub)}</div></span>
+      <span class="state s-${st}">${stLabel}</span></button>`;
+  }).join("");
+  return `<div class="label">${fmtDate(ds, { weekday: "long" })}</div>
+    <h2>${fmtDate(ds, { day: "numeric", month: "long", year: "numeric" })}</h2>
+    <div class="lessons">${items || `<div class="empty">No lessons on this day.</div>`}</div>
+    <div class="bar" style="margin-top:14px"><button class="btn primary grow" data-act="new-lesson" data-day="${ds}" ${Object.keys(S.students).length ? "" : "disabled"}>+ Add lesson</button></div>
+    ${Object.keys(S.students).length ? "" : `<p class="small muted">Add a student first.</p>`}`;
+}
+
+/* Students */
+function viewStudents() {
+  const ac = owedFor("academy");
+  let priv = 0, privN = 0, oth = 0, othN = 0;
+  for (const st of Object.values(S.students)) {
+    if (st.type === "private") { const o = owedFor(st.id); priv += o.sum; privN += o.n; }
+    if (st.type === "other") { const o = owedFor(st.id); oth += o.sum; othN += o.n; }
+  }
+  const q = ui.stuSearch.trim().toLowerCase();
+  const list = Object.values(S.students)
+    .filter(s => ui.stuFilter === "all" || s.type === ui.stuFilter)
+    .filter(s => ui.showArchived || !s.archived)
+    .filter(s => !q || s.name.toLowerCase().includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const counts = {}; for (const l of Object.values(S.lessons)) if (l.status !== "cancelled") counts[l.studentId] = (counts[l.studentId] || 0) + 1;
+  const rows = list.map(s => {
+    const o = owedByStudent(s.id);
+    const custom = s.fee !== null && s.fee !== undefined && s.fee !== "";
+    return `<button class="row${s.archived ? " archived" : ""}" data-act="open-student" data-id="${s.id}">
+      <span class="nm"><i class="dot t-${s.type}"></i><span>${esc(s.name)}</span></span>
+      <span class="c-type"><span class="badge t-${s.type}">${TYPE_LABEL[s.type]}</span></span>
+      <span class="c-fee r num">${money(studentFee(s))}${custom ? "*" : ""}</span>
+      <span class="c-n r num">${counts[s.id] || 0}</span>
+      <span class="r num owe${o.sum ? "" : " zero"}">${o.sum ? money(o.sum) : "—"}</span></button>`;
+  }).join("");
+  const seg = ["all", ...TYPES].map(t => `<button data-act="stu-filter" data-f="${t}" aria-pressed="${ui.stuFilter === t}">${t === "all" ? "All" : TYPE_LABEL[t]}</button>`).join("");
+  return `${welcomeBlock()}
+  <div class="bar"><h1 class="grow">Students</h1><button class="btn primary" data-act="new-student">+ Add student</button></div>
+  <div class="owed-row">
+    <div class="panel owed t-academy">
+      <span class="label">${esc(S.settings.academyName)} owes</span>
+      <span class="amt${ac.sum ? "" : " zero"}">${money(ac.sum)}</span>
+      <span class="small muted">${ac.n} unpaid lessons across all academy students</span>
+      <div class="bar"><button class="btn pay sm" data-act="pay" data-group="academy" ${groupLessons("academy").length ? "" : "disabled"}>Payment received</button></div>
+    </div>
+    <div class="panel owed t-private">
+      <span class="label">Private students owe</span>
+      <span class="amt${priv ? "" : " zero"}">${money(priv)}</span>
+      <span class="small muted">${privN} unpaid lessons. Mark payments on each student.</span>
+    </div>
+    <div class="panel owed t-other">
+      <span class="label">Other owes</span>
+      <span class="amt${oth ? "" : " zero"}">${money(oth)}</span>
+      <span class="small muted">${othN} unpaid lessons. Mark payments on each student.</span>
+    </div>
+  </div>
+  <div class="filters">
+    <div class="seg" role="group" aria-label="Filter by type">${seg}</div>
+    <input type="search" id="stu-search" class="search" placeholder="Search students" value="${esc(ui.stuSearch)}" aria-label="Search students">
+    <label class="check small"><input type="checkbox" id="show-arch" ${ui.showArchived ? "checked" : ""}> Show archived</label>
+  </div>
+  <div class="panel table"><div class="rows">
+    <div class="row head label"><span>Name</span><span class="c-type">Type</span><span class="c-fee r">Fee / lesson</span><span class="c-n r">Lessons</span><span class="r">Owed now</span></div>
+    ${rows || `<div class="empty">${Object.keys(S.students).length ? "No students match." : "No students yet. Add your first one."}</div>`}
+  </div></div>
+  <p class="small muted">* custom fee for that student. "Owed now" counts only lessons that have already finished, are not cancelled and are not paid yet. Upcoming lessons never add to the debt.</p>`;
+}
+
+/* Payments */
+function viewPayments() {
+  const all = Object.values(S.payments).sort((a, b) => (b.date + (b.createdAt || "")).localeCompare(a.date + (a.createdAt || "")));
+  const list = all.filter(p => ui.payFilter === "all" || p.payerType === ui.payFilter);
+  const t = todayStr();
+  let monthSum = 0, yearSum = 0;
+  for (const p of all) { if (p.date.slice(0, 7) === t.slice(0, 7)) monthSum += +p.amount || 0; if (p.date.slice(0, 4) === t.slice(0, 4)) yearSum += +p.amount || 0; }
+  const seg = ["all", ...TYPES].map(x => `<button data-act="pay-filter" data-f="${x}" aria-pressed="${ui.payFilter === x}">${x === "all" ? "All" : TYPE_LABEL[x]}</button>`).join("");
+  let html = "", lastM = "";
+  const monthTotals = {}; for (const p of list) monthTotals[p.date.slice(0, 7)] = (monthTotals[p.date.slice(0, 7)] || 0) + (+p.amount || 0);
+  for (const p of list) {
+    const mk = p.date.slice(0, 7);
+    if (mk !== lastM) { lastM = mk; html += `<div class="month-h"><span>${parseD(mk + "-01").toLocaleDateString(undefined, { month: "long", year: "numeric" })}</span><span class="num">${money(monthTotals[mk])}</span></div>`; }
+    const items = (p.items || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const range = items.length ? `${fmtDate(items[0].date, { day: "numeric", month: "short" })} – ${fmtDate(items[items.length - 1].date, { day: "numeric", month: "short" })}` : "";
+    const partial = (+p.owedAfter || 0) > 0.004;
+    html += `<div class="prow t-${p.payerType}">
+      <span class="num small pd">${fmtDate(p.date)}</span>
+      <span class="who"><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><i class="dot"></i>${esc(p.payerName)} <span class="badge">${TYPE_LABEL[p.payerType]}</span></span>
+        <span class="small muted" style="font-weight:400">${items.length} lessons · ${range}${p.note ? " · " + esc(p.note) : ""}</span></span>
+      <span class="num r" style="font-weight:600">${money(p.amount)}${partial ? `<div class="small" style="color:var(--due);font-weight:600">${money(p.owedAfter)} left owing</div>` : ""}</span>
+      <button class="btn danger sm" data-act="undo-pay" data-id="${p.id}">Undo</button>
+      <details><summary>Lessons in this payment</summary><ul class="items">${items.map(it => `<li><span><span class="num">${fmtDate(it.date)}</span> · ${esc(it.studentName || stuName(it.studentId))}${it.full === false ? ` <span class="state s-partial">part</span>` : ""}${it.upcoming ? ` <span class="state s-upcoming">in advance</span>` : ""}</span><span class="num">${money(it.fee)}</span></li>`).join("")}</ul></details>
+    </div>`;
+  }
+  return `<div class="bar"><h1 class="grow">Past payments</h1><button class="btn" data-act="export-pay" ${all.length ? "" : "disabled"}>Export CSV</button></div>
+  <div class="pay-sum">
+    <div><span class="label">Received this month</span><span class="num">${money(monthSum)}</span></div>
+    <div><span class="label">Received in ${t.slice(0, 4)}</span><span class="num">${money(yearSum)}</span></div>
+    <div><span class="label">Payments recorded</span><span class="num">${all.length}</span></div>
+  </div>
+  <div class="filters"><div class="seg" role="group" aria-label="Filter by type">${seg}</div></div>
+  <div class="panel">${html || `<div class="empty">No payments recorded yet. Use "Payment received" on the Students page or on a student's card.</div>`}</div>
+  <p class="small muted">A payment pays off the oldest lessons first. If it doesn't cover everything, the rest stays owed. Undo removes the entry and puts its amount back on the debt.</p>`;
+}
+
+/* Fees & backup */
+function viewFees() {
+  const f = S.settings.fees;
+  return `<h1 style="margin-bottom:16px">Fees &amp; backup</h1>
+  <form class="panel section" id="fees-form">
+    <h2>Default fee per lesson</h2>
+    <p class="small muted" style="margin:0">Every new and unpaid lesson uses these unless the student or the lesson has its own fee. Lessons that are already paid keep the amount they were paid at.</p>
+    <div class="form-grid">
+      ${TYPES.map(t => `<div class="field"><label for="fee-${t}"><span class="badge t-${t}">${TYPE_LABEL[t]}</span></label><input type="number" inputmode="decimal" min="0" step="any" id="fee-${t}" value="${esc(f[t])}"></div>`).join("")}
+    </div>
+    <div class="form-grid">
+      <div class="field"><label for="set-cur">Currency symbol</label><input type="text" id="set-cur" maxlength="5" value="${esc(S.settings.currency)}"></div>
+      <div class="field"><label for="set-acad">Academy name</label><input type="text" id="set-acad" maxlength="60" value="${esc(S.settings.academyName)}"><span class="hint">Shown as the payer for academy payments.</span></div>
+    </div>
+    <div class="bar"><button class="btn primary" type="submit">Save fees</button></div>
+  </form>
+  <div class="panel section">
+    <h2>Backup and export</h2>
+    <p class="small muted" style="margin:0">${STANDALONE ? `Your records are stored only on this phone. Save a full backup to Files or iCloud Drive every couple of weeks. ${lastBackup() ? "Last backup: " + fmtDate(ymd(new Date(lastBackup()))) + "." : "No backup saved yet."}` : "CSV files open in Excel or Google Sheets. The backup file holds everything and can be restored here."}</p>
+    <div class="bar">
+      <button class="btn" data-act="export-lessons">Lessons CSV</button>
+      <button class="btn" data-act="export-pay" ${Object.keys(S.payments).length ? "" : "disabled"}>Payments CSV</button>
+      <button class="btn" data-act="export-json">Full backup</button>
+      <label class="btn" for="import-file">Restore backup…</label>
+      <input type="file" id="import-file" accept=".json,application/json" hidden>
+    </div>
+    <div class="small muted">${Object.keys(S.students).length} students · ${Object.keys(S.lessons).length} lessons · ${Object.keys(S.payments).length} payments</div>
+  </div>`;
+}
+
+/* ---------- sheets ---------- */
+let sheet = null; // {type, ...}
+function openSheet(s) { sheet = s; drawSheet(); }
+function closeSheet() { sheet = null; document.getElementById("sheet-root").innerHTML = ""; }
+function refreshSheet() { if (sheet && sheet.live) drawSheet(true); }
+function drawSheet(keep) {
+  const root = document.getElementById("sheet-root");
+  if (!sheet) { root.innerHTML = ""; return; }
+  const fn = { student: sheetStudent, lesson: sheetLesson, pay: sheetPay }[sheet.type];
+  // preserve form values on live refresh
+  const vals = {};
+  if (keep) root.querySelectorAll("input,select,textarea").forEach(el => { if (el.id) vals[el.id] = el.type === "checkbox" ? el.checked : el.value; });
+  const scroll = root.querySelector(".sheet")?.scrollTop || 0;
+  root.innerHTML = `<div class="overlay" data-act="overlay"><div class="sheet" role="dialog" aria-modal="true">${fn()}</div></div>`;
+  if (keep) { for (const [id, v] of Object.entries(vals)) { const el = document.getElementById(id); if (el && !el.dataset.fresh) { if (el.type === "checkbox") el.checked = v; else el.value = v; } } root.querySelector(".sheet").scrollTop = scroll; }
+  if (sheet.type === "pay") updatePayTotal();
+  if (!keep) { const f = root.querySelector("[data-autofocus]"); if (f && window.matchMedia("(min-width: 700px)").matches) f.focus(); }
+}
+
+function sheetStudent() {
+  const s = sheet.id ? S.students[sheet.id] : null;
+  const isNew = !s;
+  const st = s || { name: "", type: sheet.defType || "academy", fee: null, phone: "", notes: "" };
+  const t = todayStr(), paid = paidIndex();
+  let body = `
+    <div class="field"><label for="st-name">Name</label><input type="text" id="st-name" data-autofocus value="${esc(st.name)}" maxlength="80" autocomplete="off"></div>
+    <div class="two">
+      <div class="field"><label for="st-type">Type</label><select id="st-type">${TYPES.map(x => `<option value="${x}" ${st.type === x ? "selected" : ""}>${TYPE_LABEL[x]}</option>`).join("")}</select></div>
+      <div class="field"><label for="st-fee">Fee per lesson</label><input type="number" inputmode="decimal" min="0" step="any" id="st-fee" value="${st.fee ?? ""}" placeholder="Default ${esc(money(S.settings.fees[st.type]))}"><span class="hint">Leave empty to use the ${TYPE_LABEL[st.type].toLowerCase()} default.</span></div>
+    </div>
+    <div class="field"><label for="st-phone">Phone or contact</label><input type="text" id="st-phone" value="${esc(st.phone || "")}" maxlength="80"></div>
+    <div class="field"><label for="st-notes">Notes</label><textarea id="st-notes" maxlength="1000">${esc(st.notes || "")}</textarea></div>
+    <div class="err" id="st-err" hidden></div>`;
+  if (!isNew) {
+    const ls = lessonsSorted().filter(l => l.studentId === s.id).reverse();
+    const o = owedByStudent(s.id);
+    const upcoming = ls.filter(l => lessonState(l, paid, t) === "upcoming").length;
+    const totalPaid = ls.filter(l => lessonState(l, paid) === "paid" && l.status !== "cancelled").length;
+    const payBlock = s.type === "academy"
+      ? `<p class="small muted" style="margin:0">Academy lessons are paid by ${esc(S.settings.academyName)} together. Record that payment from the Students page.</p>`
+      : `<div class="bar"><button class="btn pay" data-act="pay" data-group="${s.id}" ${ls.some(l => { const x = lessonState(l, paid); return isOwing(x) || x === "upcoming"; }) ? "" : "disabled"}>✓ Payment received</button><span class="small muted">Pays off the oldest lessons first. Anything not covered stays owed.</span></div>`;
+    body += `<div class="panel section" style="margin:0;padding:14px">
+      <div class="stat-line">
+        <div><span class="label">Owed now</span><span class="num owe${o.sum ? "" : " zero"}">${money(o.sum)}</span></div>
+        <div><span class="label">Unpaid lessons</span><span class="num">${o.n}</span></div>
+        <div><span class="label">Paid lessons</span><span class="num">${totalPaid}</span></div>
+        <div><span class="label">Upcoming</span><span class="num">${upcoming}</span></div>
+      </div>${payBlock}</div>
+      <div><div class="label" style="margin-bottom:6px">Lessons</div>
+      <div class="hist">${ls.map(l => { const x = lessonState(l, paid, t); const pi = paid[l.id]; return `<div><span class="num">${fmtDate(l.date)}</span><span class="num tm2 muted">${esc(l.time || "")}</span><span class="num">${pi && x !== "paid" ? `${money(remainingOf(l, pi))} left` : money(chargeOf(l, pi))}</span><span class="state s-${x}">${STATE_LABEL[x]}</span></div>`; }).join("") || `<div class="empty" style="display:block">No lessons yet.</div>`}</div></div>`;
+  }
+  const hasLessons = !isNew && Object.values(S.lessons).some(l => l.studentId === s.id);
+  const footer = isNew
+    ? `<button class="btn primary" data-act="save-student">Add student</button><span class="grow"></span><button class="btn ghost" data-act="close">Cancel</button>`
+    : `<button class="btn primary" data-act="save-student">Save</button>
+       <button class="btn" data-act="new-lesson-for" data-id="${s.id}">+ Lesson</button>
+       <span class="grow"></span>
+       <button class="btn" data-act="archive-student">${s.archived ? "Unarchive" : "Archive"}</button>
+       ${hasLessons ? "" : `<button class="btn danger" data-act="delete-student">Delete</button>`}`;
+  return `<header><h2>${isNew ? "New student" : esc(s.name)}</h2>${isNew ? "" : `<span class="badge t-${s.type}">${TYPE_LABEL[s.type]}</span>`}<button class="btn ghost sm" data-act="close" aria-label="Close">✕</button></header>
+    <div class="body">${body}</div><footer>${footer}</footer>`;
+}
+
+function sheetLesson() {
+  const l = sheet.id ? S.lessons[sheet.id] : null;
+  const isNew = !l;
+  const students = Object.values(S.students).filter(s => !s.archived || (l && s.id === l.studentId)).sort((a, b) => a.name.localeCompare(b.name));
+  const cur = l || { studentId: sheet.studentId || "", date: sheet.day || todayStr(), time: sheet.lastTime || "", duration: 60, status: "scheduled", fee: null, notes: "" };
+  const pinfo = l ? paidIndex()[l.id] : null;
+  const paidBy = pinfo ? pinfo.pays[pinfo.pays.length - 1] : null;
+  const opts = TYPES.map(t => {
+    const g = students.filter(s => s.type === t); if (!g.length) return "";
+    return `<optgroup label="${TYPE_LABEL[t]}">${g.map(s => `<option value="${s.id}" ${cur.studentId === s.id ? "selected" : ""}>${esc(s.name)}${s.archived ? " (archived)" : ""}</option>`).join("")}</optgroup>`;
+  }).join("");
+  const defFee = cur.studentId ? studentFee(S.students[cur.studentId]) : null;
+  return `<header><h2>${isNew ? "New lesson" : "Lesson"}</h2><button class="btn ghost sm" data-act="close" aria-label="Close">✕</button></header>
+  <div class="body">
+    ${paidBy ? `<div class="notice" style="margin:0">${pinfo.full ? "Paid" : `${esc(money(pinfo.amt))} of ${esc(money(lessonFee(l)))} paid`}, last payment on ${fmtDate(paidBy.date)} (${esc(paidBy.payerName)}). To change the fee or delete it, undo ${pinfo.pays.length > 1 ? "those payments" : "that payment"} first.</div>` : ""}
+    <div class="field"><label for="ls-stu">Student</label><select id="ls-stu" data-autofocus ${paidBy ? "disabled" : ""}><option value="">Choose a student…</option>${opts}</select></div>
+    <div class="three">
+      <div class="field"><label for="ls-date">Date</label><input type="date" id="ls-date" value="${cur.date}"></div>
+      <div class="field"><label for="ls-time">Start time</label><input type="time" id="ls-time" value="${esc(cur.time || "")}"></div>
+      <div class="field"><label for="ls-dur">Minutes</label><input type="number" inputmode="numeric" min="0" step="5" id="ls-dur" value="${cur.duration ?? ""}"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="ls-status">Status</label><select id="ls-status" ${paidBy ? "disabled" : ""}>
+        <option value="scheduled" ${cur.status === "scheduled" ? "selected" : ""}>Scheduled / held</option>
+        <option value="missed" ${cur.status === "missed" ? "selected" : ""}>Missed, still charged</option>
+        <option value="cancelled" ${cur.status === "cancelled" ? "selected" : ""}>Cancelled, not charged</option></select></div>
+      <div class="field"><label for="ls-fee">Fee for this lesson</label><input type="number" inputmode="decimal" min="0" step="any" id="ls-fee" value="${pinfo ? (pinfo.full ? round2(pinfo.amt) : lessonFee(l)) : (cur.fee ?? "")}" ${paidBy ? "disabled" : ""} placeholder="${defFee !== null ? "Student fee " + esc(money(defFee)) : "Student fee"}"><span class="hint">Leave empty to use the student's fee.</span></div>
+    </div>
+    ${isNew ? `<div class="two" style="align-items:end">
+      <label class="check"><input type="checkbox" id="ls-repeat"> Repeat weekly</label>
+      <div class="field"><label for="ls-weeks">For how many weeks</label><input type="number" inputmode="numeric" min="2" max="60" id="ls-weeks" value="12"></div>
+    </div>` : ""}
+    <div class="field"><label for="ls-notes">Notes</label><textarea id="ls-notes" maxlength="1000" placeholder="Topic, homework, room…">${esc(cur.notes || "")}</textarea></div>
+    <div class="err" id="ls-err" hidden></div>
+  </div>
+  <footer>
+    <button class="btn primary" data-act="save-lesson">${isNew ? "Add lesson" : "Save"}</button>
+    ${isNew ? "" : `<button class="btn" data-act="dup-lesson">Copy to next week</button>`}
+    <span class="grow"></span>
+    ${isNew ? `<button class="btn ghost" data-act="close">Cancel</button>` : `<button class="btn danger" data-act="delete-lesson" ${paidBy ? "disabled" : ""}>Delete</button>`}
+  </footer>`;
+}
+
+function sheetPay() {
+  const g = sheet.group;
+  const isAcad = g === "academy";
+  const payer = isAcad ? S.settings.academyName : stuName(g);
+  const type = isAcad ? "academy" : (S.students[g]?.type || "other");
+  const owed = owedFor(g);
+  const t = todayStr();
+  if (sheet.amt === undefined) sheet.amt = owed.sum ? String(owed.sum) : "";
+  return `<header><h2>Payment from ${esc(payer)}</h2><span class="badge t-${type}">${TYPE_LABEL[type]}</span><button class="btn ghost sm" data-act="close" aria-label="Close">✕</button></header>
+  <div class="body">
+    <div class="stat-line">
+      <div><span class="label">Owed now</span><span class="num owe${owed.sum ? "" : " zero"}">${money(owed.sum)}</span></div>
+      <div><span class="label">Unpaid lessons</span><span class="num">${owed.n}</span></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="pay-amt">Amount received</label><input type="number" inputmode="decimal" min="0" step="any" id="pay-amt" data-autofocus value="${esc(sheet.amt)}"><span class="hint">Less than the debt? The rest stays owed.</span></div>
+      <div class="field"><label for="pay-date">Date received</label><input type="date" id="pay-date" value="${t}"></div>
+    </div>
+    ${owed.sum ? `<div class="bar"><button class="btn sm" data-act="pay-full" data-v="${owed.sum}">Full debt ${esc(money(owed.sum))}</button></div>` : ""}
+    <div><div class="label" style="margin-bottom:6px">Paid off oldest first</div>
+    <div class="picklist" id="pay-alloc"></div></div>
+    <div class="total-line"><span id="pay-after-l">Still owed after this</span><span class="num" id="pay-after">${money(0)}</span></div>
+    <div class="field"><label for="pay-note">Note</label><input type="text" id="pay-note" maxlength="200" placeholder="Cash, bank transfer…"></div>
+    <div class="err" id="pay-err" hidden></div>
+  </div>
+  <footer><button class="btn pay" data-act="confirm-pay" id="pay-go">Record payment</button><span class="grow"></span><button class="btn ghost" data-act="close">Cancel</button></footer>`;
+}
+function updatePayTotal() {
+  const box = document.getElementById("pay-alloc"); if (!box) return;
+  const amtEl = document.getElementById("pay-amt"), go = document.getElementById("pay-go"), err = document.getElementById("pay-err");
+  const amount = cleanNum(amtEl.value) ?? 0;
+  const g = sheet.group, isAcad = g === "academy";
+  const { items, left, open, openTotal, paid } = allocate(g, amount);
+  const byId = {}; for (const it of items) byId[it.lessonId] = it;
+  box.innerHTML = open.map(l => {
+    const pi = paid[l.id], need = remainingOf(l, pi), it = byId[l.id];
+    const future = !isDone(l);
+    const cover = it ? (it.full ? `<span class="state s-paid">Paid off</span>` : `<span class="state s-partial">${esc(money(it.fee))} of ${esc(money(need))}</span>`) : `<span class="state ${future ? "s-upcoming" : "s-due"}">${future ? "Upcoming" : "Stays owed"}</span>`;
+    return `<div class="alloc${it ? " on" : ""}">
+      <span class="num">${fmtDate(l.date, { day: "numeric", month: "short" })}</span>
+      <span class="who">${isAcad ? esc(stuName(l.studentId)) : esc(l.time || "")}${pi && pi.amt ? ` <span class="small muted">${esc(money(pi.amt))} paid before</span>` : ""}</span>
+      <span class="num">${money(need)}</span>${cover}</div>`;
+  }).join("") || `<div class="empty">Nothing to pay. All lessons are already paid.</div>`;
+  const owedNow = owedFor(g).sum;
+  const after = Math.max(0, round2(owedNow - amount));
+  const ahead = round2(Math.max(0, amount - owedNow));
+  document.getElementById("pay-after-l").textContent = ahead > 0 ? "Paid in advance for upcoming lessons" : "Still owed after this";
+  document.getElementById("pay-after").textContent = money(ahead > 0 ? ahead : after);
+  const tooMuch = left > 0.004;
+  err.hidden = !tooMuch;
+  if (tooMuch) err.textContent = `That's ${money(left)} more than all unpaid and upcoming lessons (${money(openTotal)}). Add the upcoming lessons to the calendar first, or lower the amount.`;
+  go.disabled = amount <= 0 || tooMuch;
+  go.textContent = amount > 0 ? `Record ${money(amount)} payment` : "Record payment";
+}
+
+/* ---------- actions ---------- */
+function showErr(id, msg) { const el = document.getElementById(id); if (el) { el.textContent = msg; el.hidden = false; } }
+const armed = new Map();
+function arm(btn, key, label) {
+  if (armed.get(key)) { armed.delete(key); return true; }
+  armed.set(key, true); const orig = btn.textContent; btn.textContent = label; btn.classList.add("armed");
+  setTimeout(() => { armed.delete(key); if (btn.isConnected) { btn.textContent = orig; btn.classList.remove("armed"); } }, 3500);
+  return false;
+}
+
+function saveStudent() {
+  const name = document.getElementById("st-name").value.trim();
+  if (!name) return showErr("st-err", "Enter the student's name.");
+  const type = document.getElementById("st-type").value;
+  const feeRaw = document.getElementById("st-fee").value.trim();
+  const fee = feeRaw === "" ? null : cleanNum(feeRaw);
+  if (feeRaw !== "" && fee === null) return showErr("st-err", "The fee must be a number, like 1000.");
+  const prev = sheet.id ? S.students[sheet.id] : null;
+  const obj = { ...(prev || { id: uid("s"), createdAt: new Date().toISOString(), archived: false }), name, type, fee, phone: document.getElementById("st-phone").value.trim(), notes: document.getElementById("st-notes").value.trim() };
+  put("student", obj);
+  toast(prev ? "Student saved" : `${name} added`);
+  if (sheet.afterLesson) { openSheet({ type: "lesson", day: sheet.afterLesson, studentId: obj.id }); return; }
+  if (!prev) closeSheet(); else openSheet({ type: "student", id: obj.id, live: true });
+}
+
+let lastTime = "";
+function saveLesson() {
+  const studentId = document.getElementById("ls-stu").value;
+  const prev = sheet.id ? S.lessons[sheet.id] : null;
+  const paidBy = prev ? paidIndex()[prev.id] : null;
+  if (!studentId) return showErr("ls-err", "Choose a student.");
+  const date = document.getElementById("ls-date").value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return showErr("ls-err", "Pick a date.");
+  const time = document.getElementById("ls-time").value;
+  const dur = cleanNum(document.getElementById("ls-dur").value);
+  const status = document.getElementById("ls-status").value;
+  const feeRaw = document.getElementById("ls-fee").value.trim();
+  let fee = prev ? prev.fee ?? null : null;
+  if (!paidBy) { fee = feeRaw === "" ? null : cleanNum(feeRaw); if (feeRaw !== "" && fee === null) return showErr("ls-err", "The fee must be a number."); }
+  const notes = document.getElementById("ls-notes").value.trim();
+  lastTime = time;
+  const base = { studentId: paidBy ? prev.studentId : studentId, time, duration: dur, status: paidBy ? prev.status : status, fee, notes };
+  if (prev) {
+    put("lesson", { ...prev, ...base, date });
+    toast("Lesson saved");
+  } else {
+    const repeat = document.getElementById("ls-repeat")?.checked;
+    const weeks = Math.min(60, Math.max(1, Math.floor(cleanNum(document.getElementById("ls-weeks")?.value) || 1)));
+    const n = repeat ? weeks : 1;
+    for (let i = 0; i < n; i++) put("lesson", { id: uid("l"), createdAt: new Date().toISOString(), ...base, date: addDays(date, i * 7) });
+    toast(n > 1 ? `${n} weekly lessons added` : "Lesson added");
+  }
+  ui.selDay = date; ui.month = date.slice(0, 7);
+  closeSheet();
+}
+
+function recordPayment() {
+  const amount = cleanNum(document.getElementById("pay-amt").value.trim());
+  if (!amount) return showErr("pay-err", "Enter the amount you received.");
+  const g = sheet.group, isAcad = g === "academy";
+  const owedBefore = owedFor(g).sum;
+  const { items, left } = allocate(g, amount);
+  if (left > 0.004 || !items.length) return showErr("pay-err", "That's more than all unpaid and upcoming lessons. Lower the amount.");
+  const p = {
+    id: uid("p"), createdAt: new Date().toISOString(), date: document.getElementById("pay-date").value || todayStr(),
+    payerType: isAcad ? "academy" : (S.students[g]?.type || "other"),
+    studentId: isAcad ? null : g,
+    payerName: isAcad ? S.settings.academyName : stuName(g),
+    items, amount: round2(amount),
+    owedBefore, owedAfter: Math.max(0, round2(owedBefore - amount)),
+    note: document.getElementById("pay-note").value.trim(),
+  };
+  put("payment", p);
+  toast(p.owedAfter > 0 ? `${money(p.amount)} recorded. ${money(p.owedAfter)} still owed.` : `${money(p.amount)} recorded for ${p.payerName}`);
+  const back = sheet.back; closeSheet();
+  if (back) openSheet({ type: "student", id: back, live: true });
+}
+
+function exportFile(name, data, mime, onDone) {
+  const blob = new Blob([data], { type: mime });
+  if (downloads && typeof downloads.save === "function") {
+    downloads.save({ filename: name, data: blob })
+      .then(r => { toast(r && r.status === "saved" ? "Saved " + name : "Sent " + name); onDone && onDone(); })
+      .catch(e => toast(e && e.code === "declined" ? "Download cancelled" : "Couldn't save the file. Try again."));
+    return;
+  }
+  if (!STANDALONE) { toast("Downloads aren't available here. Open this page in the Claude app or browser to export."); return; }
+  // iPhone: the share sheet offers "Save to Files", AirDrop, WhatsApp, Mail…
+  let file = null; try { file = new File([blob], name, { type: mime }); } catch {}
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: name })
+      .then(() => { toast("Saved " + name); onDone && onDone(); })
+      .catch(e => { if (!e || e.name !== "AbortError") toast("Couldn't share the file. Try again."); });
+    return;
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  onDone && onDone();
+}
+function csv(rows) { return "﻿" + rows.map(r => r.map(v => { const s = String(v ?? ""); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(",")).join("\r\n"); }
+function exportPayments() {
+  const rows = [["Payment date", "Payer", "Type", "Lesson date", "Student", "Applied to lesson", "Part payment", "Payment amount", "Still owed after", "Note"]];
+  for (const p of Object.values(S.payments).sort((a, b) => a.date.localeCompare(b.date)))
+    (p.items || []).forEach((it, i) => rows.push([p.date, p.payerName, TYPE_LABEL[p.payerType], it.date, it.studentName, it.fee, it.full === false ? "yes" : "", i === 0 ? p.amount : "", i === 0 ? (p.owedAfter ?? "") : "", i === 0 ? p.note : ""]));
+  exportFile(`payments-${todayStr()}.csv`, csv(rows), "text/csv");
+}
+function exportLessons() {
+  const paid = paidIndex(), t = todayStr();
+  const rows = [["Date", "Time", "Minutes", "Student", "Type", "Fee", "Paid", "Left to pay", "Status", "Last paid on", "Notes"]];
+  for (const l of lessonsSorted()) { const pi = paid[l.id]; rows.push([l.date, l.time, l.duration, stuName(l.studentId), TYPE_LABEL[stuType(l)], chargeOf(l, pi), pi ? round2(pi.amt) : 0, l.status === "cancelled" ? 0 : remainingOf(l, pi), STATE_LABEL[lessonState(l, paid, t)], pi ? pi.pays[pi.pays.length - 1].date : "", l.notes]); }
+  exportFile(`lessons-${todayStr()}.csv`, csv(rows), "text/csv");
+}
+function exportJson() { exportFile(`lesson-ledger-backup-${todayStr()}.json`, JSON.stringify({ app: "lesson-ledger", version: 1, exportedAt: new Date().toISOString(), ...S }, null, 2), "application/json", () => { markBackup(); schedule(); }); }
+async function importJson(file) {
+  try {
+    const d = JSON.parse(await file.text());
+    if (!d || d.app !== "lesson-ledger") return toast("That file isn't a Lesson Ledger backup.");
+    if (d.settings) put("settings", { ...clone(DEFAULT_SETTINGS), ...d.settings, fees: { ...DEFAULT_SETTINGS.fees, ...(d.settings.fees || {}) } });
+    let n = 0;
+    for (const [kind, b] of [["student", "students"], ["lesson", "lessons"], ["payment", "payments"]])
+      for (const o of Object.values(d[b] || {})) { if (o && o.id) { await put(kind, o); n++; } }
+    toast(`Restored ${n} records`);
+  } catch { toast("Couldn't read that file. Choose a backup saved from this page."); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const tab = e.target.closest(".tab");
+  if (tab) { go(tab.dataset.view); return; }
+  const a = e.target.closest("[data-act]");
+  if (!a) return;
+  const act = a.dataset.act;
+  if (act === "overlay" && e.target !== a) return;
+  switch (act) {
+    case "overlay": case "close": closeSheet(); break;
+    case "month": {
+      if (a.dataset.d === "0") { ui.month = todayStr().slice(0, 7); ui.selDay = todayStr(); }
+      else { const [y, m] = ui.month.split("-").map(Number); const d = new Date(y, m - 1 + Number(a.dataset.d), 1); ui.month = ymd(d).slice(0, 7); }
+      render(); break;
+    }
+    case "pick-day": {
+      ui.selDay = a.dataset.day; if (ui.selDay.slice(0, 7) !== ui.month) ui.month = ui.selDay.slice(0, 7);
+      render();
+      if (window.matchMedia("(max-width: 980px)").matches) document.querySelector(".daypanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      break;
+    }
+    case "new-lesson": openSheet({ type: "lesson", day: a.dataset.day, lastTime }); break;
+    case "new-lesson-for": openSheet({ type: "lesson", day: todayStr(), studentId: a.dataset.id, lastTime }); break;
+    case "edit-lesson": openSheet({ type: "lesson", id: a.dataset.id }); break;
+    case "save-lesson": saveLesson(); break;
+    case "dup-lesson": {
+      const l = S.lessons[sheet.id]; if (!l) break;
+      const date = addDays(l.date, 7);
+      put("lesson", { ...l, id: uid("l"), createdAt: new Date().toISOString(), date, status: "scheduled" });
+      toast("Copied to " + fmtDate(date)); closeSheet(); break;
+    }
+    case "delete-lesson": {
+      if (!arm(a, "dl", "Tap again to delete")) break;
+      drop("lesson", sheet.id); toast("Lesson deleted"); closeSheet(); break;
+    }
+    case "new-student": openSheet({ type: "student", defType: ui.stuFilter !== "all" ? ui.stuFilter : "academy" }); break;
+    case "open-student": openSheet({ type: "student", id: a.dataset.id, live: true }); break;
+    case "save-student": saveStudent(); break;
+    case "archive-student": { const s = S.students[sheet.id]; put("student", { ...s, archived: !s.archived }); toast(s.archived ? "Student restored" : "Student archived"); break; }
+    case "delete-student": { if (!arm(a, "ds", "Tap again to delete")) break; drop("student", sheet.id); toast("Student deleted"); closeSheet(); break; }
+    case "stu-filter": ui.stuFilter = a.dataset.f; render(); break;
+    case "pay-filter": ui.payFilter = a.dataset.f; render(); break;
+    case "pay": { const back = sheet && sheet.type === "student" ? sheet.id : null; openSheet({ type: "pay", group: a.dataset.group, back, live: true }); break; }
+    case "pay-full": { const el = document.getElementById("pay-amt"); el.value = a.dataset.v; sheet.amt = el.value; updatePayTotal(); break; }
+    case "confirm-pay": recordPayment(); break;
+    case "undo-pay": {
+      if (!arm(a, "up" + a.dataset.id, "Tap to confirm")) break;
+      const p = S.payments[a.dataset.id]; drop("payment", a.dataset.id); toast(`Payment from ${p ? p.payerName : ""} removed`); break;
+    }
+    case "export-pay": exportPayments(); break;
+    case "export-lessons": exportLessons(); break;
+    case "export-json": exportJson(); break;
+  }
+});
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "show-arch") { ui.showArchived = t.checked; render(); }
+  else if (t.id === "import-file" && t.files && t.files[0]) { importJson(t.files[0]); t.value = ""; }
+  else if (t.id === "st-type") { const fee = document.getElementById("st-fee"); fee.placeholder = "Default " + money(S.settings.fees[t.value]); }
+  else if (t.id === "ls-stu") { const fee = document.getElementById("ls-fee"); const s = S.students[t.value]; fee.placeholder = s ? "Student fee " + money(studentFee(s)) : "Student fee"; }
+});
+document.addEventListener("input", e => {
+  if (e.target.id === "stu-search") { ui.stuSearch = e.target.value; render(); }
+  if (e.target.id === "pay-amt") { sheet.amt = e.target.value; updatePayTotal(); }
+});
+document.addEventListener("submit", e => {
+  if (e.target.id !== "fees-form") return;
+  e.preventDefault();
+  const fees = {};
+  for (const t of TYPES) { const v = cleanNum(document.getElementById("fee-" + t).value); if (v === null) { toast(`Enter a number for the ${TYPE_LABEL[t].toLowerCase()} fee.`); return; } fees[t] = v; }
+  put("settings", { ...S.settings, fees, currency: document.getElementById("set-cur").value.trim() || "₺", academyName: document.getElementById("set-acad").value.trim() || "Academy" });
+  toast("Fees saved");
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && sheet) closeSheet(); });
+
+const VIEWS = ["calendar", "students", "payments", "fees"];
+function go(v) { ui.view = VIEWS.includes(v) ? v : "calendar"; if (location.hash.slice(1) !== ui.view) { try { history.replaceState(null, "", "#" + ui.view); } catch { location.hash = ui.view; } } render(); window.scrollTo(0, 0); }
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (VIEWS.includes(v) && v !== ui.view) { ui.view = v; render(); } });
+{ const v = location.hash.slice(1); if (VIEWS.includes(v)) ui.view = v; }
+
+let toastT = null;
+function toast(msg) {
+  const r = document.getElementById("toast-root");
+  r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`;
+  clearTimeout(toastT); toastT = setTimeout(() => { r.innerHTML = ""; }, 2800);
+}
+
+init();
+// Lessons move from "Upcoming" to "Owed" as they finish, so refresh the view each minute.
+setInterval(() => { if (!document.hidden) schedule(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) schedule(); });
+})();
+</script>
+
+</body>
+</html>
